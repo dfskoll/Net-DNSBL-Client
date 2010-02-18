@@ -11,5 +11,6 @@ requires 'IO::Socket';
 build_requires 'Test::More';
 build_requires 'Test::Deep';
 build_requires 'Test::Exception';
+install_script 'script/dnsblcheck';
 
 WriteAll;

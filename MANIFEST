@@ -12,6 +12,7 @@ Makefile.PL
 MANIFEST
 META.yml
 README
+script/dnsblcheck
 t/00-load.t
 t/failures.t
 t/pod-coverage.t
