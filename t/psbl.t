@@ -11,6 +11,11 @@ $c->query('127.0.0.2', [
 		type   => 'match',
 		data   => '127.0.0.2'
 	},
+	{
+		domain => 'psbl.surriel.com',
+		type   => 'match',
+		data   => '127.0.0.9'
+	},
 ]);
 
 my @expected = ({

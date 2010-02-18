@@ -20,12 +20,11 @@ Net::DNSBL::Client - Client code for querying multible DNSBLs
 
     $c->query('127.0.0.2', [
         { domain => 'simple.dnsbl.tld' },
-        { domain => 'masked.dnsbl.tld', type => 'mask', data -> '127.0.0.255' }
+        { domain => 'masked.dnsbl.tld', type => 'mask', data => '127.0.0.255' }
     ]);
 
     # And later...
     my $answers = $c->get_answers();
-    my @hits = grep { $_->{hit} } @{$answers};
 
 =head1 METHODS
 
@@ -47,13 +46,9 @@ $args is a hash reference and may contain the following key-value pairs:
 
 =item timeout
 
-(optional) An integer number of seconds to use as the upper time limit for the query.
-If not provided, the default is 10 seconds.
-
-=item early_exit
-
-(optional) If set to 1, querying will stop after the first result is received, even if other DNSBLs are being queried.
-Default is 0.
+(optional) An integer number of seconds to use as the upper time limit
+for the query.  If not provided, the default is 10 seconds.  If provided,
+timeout must be a I<positive> integer.
 
 =back
 
@@ -67,7 +62,6 @@ sub new
 	my $self = {
 		resolver   => undef,
 		timeout    => 10,
-		early_exit => 0,
 	};
 	foreach my $possible_arg (keys(%$self)) {
 		if( exists $args->{$possible_arg} ) {
@@ -78,16 +72,132 @@ sub new
 		croak("Unknown arguments to new: " .
 		      join(', ', (sort { $a cmp $b } keys(%$args))));
 	}
+
+	# Timeout must be a positive integer
+	if (($self->{timeout} !~ /^\d+$/) || $self->{timeout} <= 0) {
+		croak("Timeout must be a positive integer");
+	}
+
 	$self->{resolver} = Net::DNS::Resolver->new() unless $self->{resolver};
 
 	$self->{in_flight} = 0;
+	$self->{early_exit} = 0;
+
 	bless $self, $class;
 	return $self;
 }
 
 =head2 Instance Methods
 
-TODO
+=over 4
+
+=item get_resolver ( )
+
+Returns the Net::DNS::Resolver object used for DNS queries.
+
+=item get_timeout ( )
+
+Returns the timeout in seconds for queries.
+
+=item set_timeout ( $secs )
+
+Sets the timeout in seconds for queries.
+
+=item query_is_in_flight ( )
+
+Returns non-zero if "query" has been called, but "get_answers" has not
+yet been called.  Returns zero otherwise.
+
+=item query ( $ipaddr, $dnsbls [, $options])
+
+Issues a set of DNS queries.  Note that the query method returns as
+soon as the DNS queries have been issued.  It does I<not> wait for
+DNS responses to come in.  Once query has been called, the
+Net::DNSBL::Client object is said to have a query I<in flight>.  query
+may not be called again while a query is in flight.
+
+$ipaddr is the text representation of an IPv4 or IPv6 address.
+$dnsbls is a reference to a list of DNSBL entries; each DNSBL entry
+is a hash with the following members:
+
+=over 4
+
+=item domain
+
+(required) The domain to query.  For example, I<zen.spamhaus.org>.
+
+=item type
+
+(optional) The type of DNSBL.  Possible values are I<normal>, meaning
+that any returned A record indicates a hit, I<match>, meaning that
+one of the returned A records must exactly match a given IP address, or
+I<mask>, meaning that one of the returned A records must evaluate to non-zero
+when bitwise-ANDed against a given IP address.  If omitted, type defaults
+to I<normal>
+
+=item data
+
+(optional)  For the I<match> and I<mask> types, this data specifies the
+required match or the bitwise-AND mask.  In the case of a I<mask> type,
+the data can be something like "0.0.0.4", or an integer like "8".  In the
+latter case, the integer I<n> must range from 1 to 255 and is equivalent
+to 0.0.0.I<n>.
+
+=item userdata
+
+(optional) This element can be any scalar or reference that you like.
+It is simply returned back unchanged in the list of hits.
+
+=back
+
+$options, if supplied, is a hash of options.  Currently, only one option
+is defined:
+
+=over 4
+
+=item early_exit
+
+If set to 1, querying will stop after the first positive result is
+received, even if other DNSBLs are being queried.  Default is 0.
+
+=back
+
+=item get_answers ( )
+
+This method may only be called while a query is in flight.  It waits
+for DNS replies to come back and returns a reference to a list of I<hits>.
+Each hit is a hash reference containing the following elements:
+
+=over 4
+
+=item domain
+
+The domain of the DNSBL.
+
+=item type
+
+The type of the DNSBL (normal, match or mask).
+
+=item data
+
+The data supplied (for normal and mask types)
+
+=item userdata
+
+The userdata as supplied in the query() call
+
+=item actual_hit
+
+The actual A record returned by the lookup that caused a hit.
+
+=back
+
+The hit may contain other elements not documented here; you should count
+on only the elements documented above.
+
+If no DNSBLs were hit, then a reference to a zero-element list is returned.
+
+=back
 
 =cut
 
@@ -106,6 +216,9 @@ sub get_timeout
 sub set_timeout
 {
 	my ($self, $secs) = @_;
+	if (($secs !~ /^\d+$/) || $secs <= 0) {
+		croak("Timeout must be a positive integer");
+	}
 	$self->{timeout} = $secs;
 	return $secs;
 }
@@ -124,13 +237,14 @@ sub query
 	croak('First argument (ip address) is required')     unless $ipaddr;
 	croak('Second argument (dnsbl list) is required')    unless $dnsbls;
 
-	if ($options && $options->{early_exit}) {
-		$self->{early_exit} = 1;
+	if ($options && exists($options->{early_exit})) {
+		$self->{early_exit} = $options->{early_exit};
+	} else {
+		$self->{early_exit} = 0;
 	}
 
-	# U
 	# Reverse the IP address in preparation for lookups
-	my $revip = $self->reverse_address($ipaddr);
+	my $revip = $self->_reverse_address($ipaddr);
 
 	# Build a hash of domains to query.  The key is the domain;
 	# value is an arrayref of type/data pairs
@@ -257,7 +371,7 @@ sub _process_reply
 	}
 }
 
-sub reverse_address
+sub _reverse_address
 {
 	my ($self, $addr) = @_;
 
@@ -267,7 +381,7 @@ sub reverse_address
 		return "$4.$3.$2.$1";
 	}
 	if ($addr =~ /:/) {
-		$addr = $self->expand_ipv6_address($addr);
+		$addr = $self->_expand_ipv6_address($addr);
 		$addr =~ s/://g;
 		return join('.', reverse(split(//, $addr)));
 	}
@@ -275,7 +389,7 @@ sub reverse_address
 	croak("Unrecognized IP address '$addr'");
 }
 
-sub expand_ipv6_address
+sub _expand_ipv6_address
 {
 	my ($self, $addr) = @_;
 
