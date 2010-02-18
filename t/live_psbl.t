@@ -1,6 +1,9 @@
-use Test::More tests => 1;
+use Test::More;
 use Test::Deep;
 use Net::DNSBL::Client;
+
+plan skip_all => 'DNS unavailable; skipping tests' unless Net::DNS::Resolver->new->query('cpan.org');
+plan tests => 1;
 
 my $c = Net::DNSBL::Client->new();
 

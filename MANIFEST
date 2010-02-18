@@ -5,6 +5,7 @@ inc/Module/Install/Can.pm
 inc/Module/Install/Fetch.pm
 inc/Module/Install/Makefile.pm
 inc/Module/Install/Metadata.pm
+inc/Module/Install/Scripts.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
 lib/Net/DNSBL/Client.pm
@@ -14,10 +15,10 @@ META.yml
 README
 script/dnsblcheck
 t/00-load.t
-t/dnswl.t
 t/failures.t
+t/live_dnswl.t
+t/live_psbl.t
+t/live_spamhaus.t
 t/pod-coverage.t
 t/pod.t
-t/psbl.t
 t/revip.t
-t/spamhaus.t
