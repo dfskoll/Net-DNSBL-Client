@@ -238,24 +238,4 @@ sub expand_ipv6_address
 	return join(':', map { (length($_) < 4 ? ('0' x (4-length($_)) . $_) : $_) } (split(/:/, $addr)));
 }
 
-#my $c = Net::DNSBL::Client->new();
-#$c->query('127.0.0.2', undef,
-#	  [{domain => 'zen.spamhaus.org',
-#	    type => 'match',
-#	    data => '127.0.0.2'},
-#	   {domain => 'zen.spamhaus.org',
-#	    type => 'match',
-#	    data => '127.0.0.4'},
-#	   {domain => 'zen.spamhaus.org',
-#	    type => 'match',
-#	    data => '127.0.0.10'},
-#	   {domain => 'zen.spamhaus.org',
-#	    type => 'match',
-#	    data => '127.0.0.20'}]);
-
-#my $ans = $c->get_answers();
-
-#use Data::Dumper;
-#print Dumper($ans);
-
 1;
