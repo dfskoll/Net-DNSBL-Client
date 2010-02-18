@@ -59,7 +59,7 @@ sub query_is_in_flight
 
 sub query
 {
-	my ($self, $ipaddr, $options, $dnsbls) = @_;
+	my ($self, $ipaddr, $dnsbls, $options) = @_;
 
 	croak('Cannot issue new query while one is in flight') if $self->{in_flight};
 	croak('First argument (ip address) is required')     unless $ipaddr;

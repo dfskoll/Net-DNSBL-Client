@@ -6,7 +6,6 @@ my $c = Net::DNSBL::Client->new();
 
 
 $c->query('127.0.0.2',
-	undef,
 	[ {
 		domain => 'zen.spamhaus.org',
 		type   => 'match',
