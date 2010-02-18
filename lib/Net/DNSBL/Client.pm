@@ -12,12 +12,14 @@ sub new
 {
 	my ($class, $args) = @_;
 	my $self = {
-		resolver => undef,
-		timeout  => 10,
+		resolver   => undef,
+		timeout    => 10,
+		early_exit => 0,
 	};
 	foreach my $possible_arg (keys(%$self)) {
-		my $val = delete $args->{$possible_arg};
-		$self->{$possible_arg} = $val if defined($val);
+		if( exists $args->{$possible_arg} ) {
+			$self->{$possible_arg} = delete $args->{$possible_arg};
+		}
 	}
 	if (scalar(%$args)) {
 		croak("Unknown arguments to new: " .
@@ -62,10 +64,9 @@ sub query
 	croak("Cannot issue a query while one is in flight")
 	    if $self->{in_flight};
 
-	my $early_exit = 0;
-	$early_exit = 1 if ($options && $options->{early_exit});
-
-	$self->{early_exit} = $early_exit;
+	if ($options && $options->{early_exit}) {
+		$self->{early_exit} = 1;
+	}
 
 	# Reverse the IP address in preparation for lookups
 	my $revip = $self->reverse_address($ipaddr);
@@ -97,15 +98,13 @@ sub _build_domains
 	my $domains = {};
 
 	foreach my $entry (@$dnsbls) {
-		my $domain = $entry->{domain};
-		my $type = $entry->{type} || 'normal';
-		my $data = $entry->{data};
-		my $userdata = $entry->{userdata};
-		push(@{$domains->{$domain}}, {domain   => $domain,
-					      type     => $type,
-					      data     => $data,
-					      userdata => $userdata,
-					      hit      => 0});
+		push(@{$domains->{$entry->{domain}}}, {
+			domain   => $entry->{domain},
+			type     => ($entry->{type} || 'normal'),
+			data     => $entry->{data},
+			userdata => $entry->{userdata},
+			hit      => 0
+		});
 	}
 	return $domains;
 }
@@ -118,11 +117,8 @@ sub _send_queries
 	$self->{sel} = IO::Select->new();
 	$self->{sock_to_domain} = {};
 
-	my $res = $self->{resolver};
-	my $sock;
-
 	foreach my $domain (keys(%{$self->{domains}})) {
-		$sock = $res->bgsend("$revip.$domain", 'A');
+		my $sock = $self->{resolver}->bgsend("$revip.$domain", 'A');
 		$self->{sock_to_domain}->{$sock} = $domain;
 		$self->{sel}->add($sock);
 	}
@@ -133,22 +129,19 @@ sub _collect_results
 	my ($self) = @_;
 	my $ans = [];
 
-	my @ready;
 	my $terminate = time() + $self->{timeout};
 	my $sel = $self->{sel};
-	my $sock_to_domain = $self->{sock_to_domain};
-	my $res = $self->{resolver};
 
 	while(time() <= $terminate && $sel->count()) {
 		my $expire = $terminate - time();
 		$expire = 1 if ($expire < 1);
-		@ready = $sel->can_read($expire);
+		my @ready = $sel->can_read($expire);
 
 		return $ans unless scalar(@ready);
 
 		foreach my $sock (@ready) {
-			my $pack = $res->bgread($sock);
-			my $domain = $sock_to_domain->{$sock};
+			my $pack = $self->{resolver}->bgread($sock);
+			my $domain = $self->{sock_to_domain}{$sock};
 			$sel->remove($sock);
 			undef($sock);
 			next if ($pack->header->rcode eq 'SERVFAIL' ||
@@ -217,7 +210,7 @@ sub reverse_address
 		return join('.', reverse(split(//, $addr)));
 	}
 
-	corak("Unrecognized IP address $addr");
+	croak("Unrecognized IP address $addr");
 }
 
 sub expand_ipv6_address
