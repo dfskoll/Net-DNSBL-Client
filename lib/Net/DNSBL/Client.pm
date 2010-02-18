@@ -227,29 +227,30 @@ sub _process_reply
 			next if $dnsbl->{hit};
 			if ($dnsbl->{type} eq 'normal') {
 				$dnsbl->{hit} = 1;
-				push(@$ans, $dnsbl);
 			} elsif ($dnsbl->{type} eq 'match') {
 				next unless $rr->address eq $dnsbl->{data};
 				$dnsbl->{hit} = 1;
-				push(@$ans, $dnsbl);
 			} elsif ($dnsbl->{type} eq 'mask') {
-				my ($a, $b, $c, $d);
 
+				my @quads;
 				# For mask, we can be given an IP mask like
 				# a.b.c.d, or an integer n.  The latter case
 				# is treated as 0.0.0.n.
 				if ($dnsbl->{data} =~ /^\d+$/) {
-					$a = 0;
-					$b = 0;
-					$c = 0;
-					$d = $dnsbl->{data};
+					@quads = (0,0,0,$dnsbl->{data});
 				} else {
-					($a, $b, $c, $d) = split(/\./, $dnsbl->{data});
+					@quads = split(/\./,$dnsbl->{data});
 				}
 
-				my ($aa, $bb, $cc, $dd) = split(/\./, $rr->address);
-				next unless ($a & $aa) || ($b & $bb) || ($c & $cc) || ($d & $dd);
+				my $mask = unpack('N',pack('C4', @quads));
+				my $got  = unpack('N',pack('C4', split(/\./,$rr->address)));
+				next unless ($got & $mask);
+
 				$dnsbl->{hit} = 1;
+			}
+
+			if( $dnsbl->{hit} ) {
+				$dnsbl->{actual_hit} = $rr->address;
 				push(@$ans, $dnsbl);
 			}
 		}
