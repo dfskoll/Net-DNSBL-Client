@@ -117,6 +117,7 @@ Net::DNSBL::Client object is said to have a query I<in flight>.  query
 may not be called again while a query is in flight.
 
 $ipaddr is the text representation of an IPv4 or IPv6 address.
+
 $dnsbls is a reference to a list of DNSBL entries; each DNSBL entry
 is a hash with the following members:
 
