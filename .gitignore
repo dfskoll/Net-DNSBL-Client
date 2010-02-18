@@ -1,0 +1,7 @@
+*~
+.*.swp
+MANIFEST.bak
+Makefile
+META.yml
+Makefile.old
+inc/
