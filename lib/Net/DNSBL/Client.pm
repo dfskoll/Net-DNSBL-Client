@@ -1,12 +1,65 @@
 package Net::DNSBL::Client;
 use strict;
 use warnings;
+use 5.008;
 
 use Carp;
 use Net::DNS::Resolver;
 use IO::Select;
 
 our $VERSION = '0.100';
+
+=head1 NAME
+
+Net::DNSBL::Client - Client code for querying multible DNSBLs
+
+=head1 SYNOPSIS
+
+    use Net::DNSBL::Client;
+    my $c = Net::DNSBL::Client->new({ timeout => 3 });
+
+    $c->query('127.0.0.2', [
+        { domain => 'simple.dnsbl.tld' },
+        { domain => 'masked.dnsbl.tld', type => 'mask', data -> '127.0.0.255' }
+    ]);
+
+    # And later...
+    my $answers = $c->get_answers();
+    my @hits = grep { $_->{hit} } @{$answers};
+
+=head1 METHODS
+
+=head2 Class Methods
+
+=over 4
+
+=item new ( $args )
+
+Returns a new Net::DNSBL::Client object.
+
+$args is a hash reference and may contain the following key-value pairs:
+
+=over 4
+
+=item resolver
+
+(optional) A Net::DNS::Resolver object.  If not provided, a new resolver will be created.
+
+=item timeout
+
+(optional) An integer number of seconds to use as the upper time limit for the query.
+If not provided, the default is 10 seconds.
+
+=item early_exit
+
+(optional) If set to 1, querying will stop after the first result is received, even if other DNSBLs are being queried.
+Default is 0.
+
+=back
+
+=back
+
+=cut
 
 sub new
 {
@@ -31,6 +84,12 @@ sub new
 	bless $self, $class;
 	return $self;
 }
+
+=head2 Instance Methods
+
+TODO
+
+=cut
 
 sub get_resolver
 {
@@ -241,3 +300,23 @@ sub expand_ipv6_address
 }
 
 1;
+
+__END__
+
+=head1 DEPENDENCIES
+
+L<Net::DNS::Resolver>, L<IO::Select>
+
+=head1 AUTHOR
+
+David Skoll <dfs@roaringpenguin.com>,
+Dave O'Neill <dmo@roaringpenguin.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2010 Roaring Penguin Software
+
+This program is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
+=cut
