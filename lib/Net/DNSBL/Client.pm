@@ -6,6 +6,8 @@ use Carp;
 use Net::DNS::Resolver;
 use IO::Select;
 
+our $VERSION = '0.100';
+
 sub new
 {
 	my ($class, $args) = @_;
