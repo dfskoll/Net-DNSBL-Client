@@ -112,8 +112,8 @@ yet been called.  Returns zero otherwise.
 
 Issues a set of DNS queries.  Note that the query method returns as
 soon as the DNS queries have been issued.  It does I<not> wait for
-DNS responses to come in.  Once query has been called, the
-Net::DNSBL::Client object is said to have a query I<in flight>.  query
+DNS responses to come in.  Once query() has been called, the
+Net::DNSBL::Client object is said to have a query I<in flight>.  query()
 may not be called again while a query is in flight.
 
 $ipaddr is the text representation of an IPv4 or IPv6 address.
@@ -167,7 +167,10 @@ received, even if other DNSBLs are being queried.  Default is 0.
 
 This method may only be called while a query is in flight.  It waits
 for DNS replies to come back and returns a reference to a list of I<hits>.
-Each hit is a hash reference containing the following elements:
+Once I<get_answers()> returns, a query is no longer in flight.
+
+Each hit in the returned list is a hash reference containing the
+following elements:
 
 =over 4
 
