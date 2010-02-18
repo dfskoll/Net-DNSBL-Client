@@ -61,13 +61,15 @@ sub query
 {
 	my ($self, $ipaddr, $options, $dnsbls) = @_;
 
-	croak("Cannot issue a query while one is in flight")
-	    if $self->{in_flight};
+	croak('Cannot issue new query while one is in flight') if $self->{in_flight};
+	croak('First argument (ip address) is required')     unless $ipaddr;
+	croak('Second argument (dnsbl list) is required')    unless $dnsbls;
 
 	if ($options && $options->{early_exit}) {
 		$self->{early_exit} = 1;
 	}
 
+	# U
 	# Reverse the IP address in preparation for lookups
 	my $revip = $self->reverse_address($ipaddr);
 
@@ -210,7 +212,7 @@ sub reverse_address
 		return join('.', reverse(split(//, $addr)));
 	}
 
-	croak("Unrecognized IP address $addr");
+	croak("Unrecognized IP address '$addr'");
 }
 
 sub expand_ipv6_address
