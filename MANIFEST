@@ -14,8 +14,10 @@ META.yml
 README
 script/dnsblcheck
 t/00-load.t
+t/dnswl.t
 t/failures.t
 t/pod-coverage.t
 t/pod.t
+t/psbl.t
 t/revip.t
 t/spamhaus.t
