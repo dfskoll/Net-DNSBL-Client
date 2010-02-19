@@ -11,7 +11,7 @@ our $VERSION = '0.100';
 
 =head1 NAME
 
-Net::DNSBL::Client - Client code for querying multible DNSBLs
+Net::DNSBL::Client - Client code for querying multiple DNSBLs
 
 =head1 SYNOPSIS
 
@@ -20,7 +20,7 @@ Net::DNSBL::Client - Client code for querying multible DNSBLs
 
     $c->query_ip('127.0.0.2', [
         { domain => 'simple.dnsbl.tld' },
-        { domain => 'masked.dnsbl.tld', type => 'mask', data => '127.0.0.255' }
+        { domain => 'masked.dnsbl.tld', type => 'mask', data => '0.0.0.255' }
     ]);
 
     # And later...
