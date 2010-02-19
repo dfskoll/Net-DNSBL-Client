@@ -8,7 +8,7 @@ all_from 'lib/Net/DNSBL/Client.pm';
 requires 'Net::DNS::Resolver';
 requires 'IO::Socket';
 
-build_requires 'Test::More';
+build_requires 'Test::More' => '0.82';
 build_requires 'Test::Deep';
 build_requires 'Test::Exception';
 install_script 'script/dnsblcheck';
