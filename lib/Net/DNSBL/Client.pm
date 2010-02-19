@@ -298,6 +298,9 @@ sub _send_queries
 
 	foreach my $domain (keys(%{$self->{domains}})) {
 		my $sock = $self->{resolver}->bgsend("$revip.$domain", 'A');
+		unless ($sock) {
+			die $self->{resolver}->errorstring;
+		}
 		$self->{sock_to_domain}->{$sock} = $domain;
 		$self->{sel}->add($sock);
 	}
@@ -323,6 +326,7 @@ sub _collect_results
 			my $domain = $self->{sock_to_domain}{$sock};
 			$sel->remove($sock);
 			undef($sock);
+			next unless $pack;
 			next if ($pack->header->rcode eq 'SERVFAIL' ||
 				 $pack->header->rcode eq 'NXDOMAIN');
 			$self->_process_reply($domain, $pack, $ans);
