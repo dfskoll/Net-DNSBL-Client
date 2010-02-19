@@ -30,7 +30,7 @@ foreach my $dnsbl (@ARGV) {
 }
 
 my $c = Net::DNSBL::Client->new();
-$c->query($ipaddr, $dnsbls);
+$c->query_ip($ipaddr, $dnsbls);
 my $ans = $c->get_answers();
 if (scalar(@$ans) == 0) {
 	print "No hits.\n";
