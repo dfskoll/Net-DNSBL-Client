@@ -18,7 +18,7 @@ Net::DNSBL::Client - Client code for querying multible DNSBLs
     use Net::DNSBL::Client;
     my $c = Net::DNSBL::Client->new({ timeout => 3 });
 
-    $c->query('127.0.0.2', [
+    $c->query_ip('127.0.0.2', [
         { domain => 'simple.dnsbl.tld' },
         { domain => 'masked.dnsbl.tld', type => 'mask', data => '127.0.0.255' }
     ]);
@@ -108,12 +108,12 @@ Sets the timeout in seconds for queries.
 Returns non-zero if "query" has been called, but "get_answers" has not
 yet been called.  Returns zero otherwise.
 
-=item query ( $ipaddr, $dnsbls [, $options])
+=item query_ip ( $ipaddr, $dnsbls [, $options])
 
-Issues a set of DNS queries.  Note that the query method returns as
+Issues a set of DNS queries.  Note that the query_ip() method returns as
 soon as the DNS queries have been issued.  It does I<not> wait for
-DNS responses to come in.  Once query() has been called, the
-Net::DNSBL::Client object is said to have a query I<in flight>.  query()
+DNS responses to come in.  Once query_ip() has been called, the
+Net::DNSBL::Client object is said to have a query I<in flight>.  query_ip()
 may not be called again while a query is in flight.
 
 $ipaddr is the text representation of an IPv4 or IPv6 address.
@@ -188,7 +188,7 @@ The data supplied (for normal and mask types)
 
 =item userdata
 
-The userdata as supplied in the query() call
+The userdata as supplied in the query_ip() call
 
 =item actual_hit
 
@@ -233,7 +233,7 @@ sub query_is_in_flight
 	return $self->{in_flight};
 }
 
-sub query
+sub query_ip
 {
 	my ($self, $ipaddr, $dnsbls, $options) = @_;
 

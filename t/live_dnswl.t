@@ -8,7 +8,7 @@ plan tests => 1;
 my $c = Net::DNSBL::Client->new();
 
 # http://www.dnswl.org/tech
-$c->query('127.0.0.2', [
+$c->query_ip('127.0.0.2', [
 	{
 		domain => 'list.dnswl.org',
 		type   => 'mask',
