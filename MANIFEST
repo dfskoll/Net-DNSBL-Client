@@ -18,6 +18,7 @@ t/00-load.t
 t/failures.t
 t/live_dnswl.t
 t/live_psbl.t
+t/live_spamcop.t
 t/live_spamhaus.t
 t/pod-coverage.t
 t/pod.t
