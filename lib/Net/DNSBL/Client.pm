@@ -289,17 +289,9 @@ sub get_answers
 	$self->_collect_results();
 
 	my $ans = [];
-	if ($self->{return_all}) {
-		foreach my $d (keys %{$self->{domains}}) {
-			foreach my $r (@{$self->{domains}->{$d}}) {
-				push(@$ans, $r);
-			}
-		}
-	} else {
-		foreach my $d (keys %{$self->{domains}}) {
-			foreach my $r (@{$self->{domains}->{$d}}) {
-				push(@$ans, $r) if $r->{hit};
-			}
+	foreach my $d (keys %{$self->{domains}}) {
+		foreach my $r (@{$self->{domains}->{$d}}) {
+			push(@$ans, $r) if ( $r->{hit} || $self->{return_all} );
 		}
 	}
 
