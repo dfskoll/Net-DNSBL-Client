@@ -24,6 +24,7 @@ my @expected = (
 		hit => 1,
 		data => '0.0.255.255',
 		actual_hit => '127.0.10.0',
+		replycode  => 'NOERROR',
 		type => 'mask'
 	},
 );
