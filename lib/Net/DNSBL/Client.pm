@@ -389,13 +389,14 @@ sub _process_reply
 	foreach my $rr ($pack->answer) {
 		next unless $rr->type eq 'A';
 		foreach my $dnsbl (@$entry) {
-			next if $dnsbl->{hit} && ($dnsbl->{type} ne 'normal');
+			my $this_rr_hit = 0;
+			next if $dnsbl->{hit} && ($dnsbl->{type} eq 'match');
 			$dnsbl->{replycode} = $rcode;
 			if ($dnsbl->{type} eq 'normal') {
-				$dnsbl->{hit} = 1;
+				$this_rr_hit = 1;
 			} elsif ($dnsbl->{type} eq 'match') {
 				next unless $rr->address eq $dnsbl->{data};
-				$dnsbl->{hit} = 1;
+				$this_rr_hit = 1;
 			} elsif ($dnsbl->{type} eq 'mask') {
 
 				my @quads;
@@ -412,10 +413,11 @@ sub _process_reply
 				my $got  = unpack('N',pack('C4', split(/\./,$rr->address)));
 				next unless ($got & $mask);
 
-				$dnsbl->{hit} = 1;
+				$this_rr_hit = 1;
 			}
 
-			if( $dnsbl->{hit} ) {
+			if( $this_rr_hit ) {
+				$dnsbl->{hit} = 1;
 				if( ! $dnsbl->{actual_hits} ) {
 					$dnsbl->{actual_hits} = [];
 				}
