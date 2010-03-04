@@ -206,9 +206,10 @@ The data supplied (for normal and mask types)
 
 The userdata as supplied in the I<query_ip()> call
 
-=item actual_hit
+=item actual_hits
 
-The actual A record returned by the lookup that caused a hit.
+Reference to array containing actual A records returned by the lookup that
+caused a hit.
 
 =item replycode
 
@@ -388,7 +389,7 @@ sub _process_reply
 	foreach my $rr ($pack->answer) {
 		next unless $rr->type eq 'A';
 		foreach my $dnsbl (@$entry) {
-			next if $dnsbl->{hit};
+			next if $dnsbl->{hit} && ($dnsbl->{type} ne 'normal');
 			$dnsbl->{replycode} = $rcode;
 			if ($dnsbl->{type} eq 'normal') {
 				$dnsbl->{hit} = 1;
@@ -415,7 +416,10 @@ sub _process_reply
 			}
 
 			if( $dnsbl->{hit} ) {
-				$dnsbl->{actual_hit} = $rr->address;
+				if( ! $dnsbl->{actual_hits} ) {
+					$dnsbl->{actual_hits} = [];
+				}
+				push @{$dnsbl->{actual_hits}}, $rr->address;
 				$got_a_hit = 1;
 			}
 		}
