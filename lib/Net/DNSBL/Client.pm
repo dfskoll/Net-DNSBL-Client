@@ -7,7 +7,7 @@ use Carp;
 use Net::DNS::Resolver;
 use IO::Select;
 
-our $VERSION = '0.200';
+our $VERSION = '0.201';
 
 =head1 NAME
 
