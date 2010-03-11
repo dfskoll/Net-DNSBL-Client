@@ -7,7 +7,7 @@ use Carp;
 use Net::DNS::Resolver;
 use IO::Select;
 
-our $VERSION = '0.201';
+our $VERSION = '0.202';
 
 =head1 NAME
 
@@ -19,9 +19,10 @@ Net::DNSBL::Client - Client code for querying multiple DNSBLs
     my $c = Net::DNSBL::Client->new({ timeout => 3 });
 
     $c->query_ip('127.0.0.2', [
-        { domain => 'simple.dnsbl.tld' },
-        { domain => 'masked.dnsbl.tld', type => 'mask', data => '0.0.0.255' }
-    ]);
+            { domain => 'simple.dnsbl.tld' },
+            { domain => 'masked.dnsbl.tld', type => 'mask', data => '0.0.0.255' },
+            { domain => 'need-a-key.example.net' }],
+        { lookup_keys => { 'need-a-key.example.net' => 'my_secret_key' }});
 
     # And later...
     my $answers = $c->get_answers();
@@ -169,6 +170,13 @@ hit.  If set to 0 (the default), then the return value from
 I<get_answers()> only returns entries for those DNSBLs that actually
 hit.
 
+=item lookup_keys
+
+This is a hashref of domain_name => key.  Some domains require a secret
+key to be inserted just before the domain name; rather than including
+the key in the domain, you can separate it out with the lookup_keys hash,
+making the returned results more readable.
+
 =back
 
 =item get_answers ( )
@@ -278,7 +286,12 @@ sub query_ip
 	# Build a hash of domains to query.  The key is the domain;
 	# value is an arrayref of type/data pairs
 	$self->{domains} = $self->_build_domains($dnsbls);
-	$self->_send_queries($revip);
+	my $lookup_keys = {};
+	if ($options && exists($options->{lookup_keys}) && ref($options->{lookup_keys}) eq 'HASH') {
+		$lookup_keys = $options->{lookup_keys};
+	}
+
+	$self->_send_queries($revip, $lookup_keys);
 }
 
 sub get_answers
@@ -324,14 +337,20 @@ sub _build_domains
 
 sub _send_queries
 {
-	my ($self, $revip) = @_;
+	my ($self, $revip, $lookup_keys) = @_;
 
 	$self->{in_flight} = 1;
 	$self->{sel} = IO::Select->new();
 	$self->{sock_to_domain} = {};
 
 	foreach my $domain (keys(%{$self->{domains}})) {
-		my $sock = $self->{resolver}->bgsend("$revip.$domain", 'A');
+		my $lookup_key;
+		if (exists($lookup_keys->{$domain}) && ($lookup_keys->{$domain} ne '')) {
+			$lookup_key = '.' . $lookup_keys->{$domain};
+		} else {
+			$lookup_key = '';
+		}
+		my $sock = $self->{resolver}->bgsend("$revip$lookup_key.$domain", 'A');
 		unless ($sock) {
 			die $self->{resolver}->errorstring;
 		}
