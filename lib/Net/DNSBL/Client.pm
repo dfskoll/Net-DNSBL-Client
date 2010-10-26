@@ -7,7 +7,7 @@ use Carp;
 use Net::DNS::Resolver;
 use IO::Select;
 
-our $VERSION = '0.202';
+our $VERSION = '0.203';
 
 =head1 NAME
 
@@ -21,6 +21,7 @@ Net::DNSBL::Client - Client code for querying multiple DNSBLs
     $c->query_ip('127.0.0.2', [
             { domain => 'simple.dnsbl.tld' },
             { domain => 'masked.dnsbl.tld', type => 'mask', data => '0.0.0.255' },
+            { domain => 'txt.dnsbl.tld', type => 'txt' },
             { domain => 'need-a-key.example.net' }],
         { lookup_keys => { 'need-a-key.example.net' => 'my_secret_key' }});
 
@@ -131,11 +132,12 @@ is a hash with the following members:
 =item type
 
 (optional) The type of DNSBL.  Possible values are I<normal>, meaning
-that any returned A record indicates a hit, I<match>, meaning that
-one of the returned A records must exactly match a given IP address, or
-I<mask>, meaning that one of the returned A records must evaluate to non-zero
-when bitwise-ANDed against a given IP address.  If omitted, type defaults
-to I<normal>
+that any returned A record indicates a hit, I<match>, meaning that one
+of the returned A records must exactly match a given IP address,
+I<mask>, meaning that one of the returned A records must evaluate to
+non-zero when bitwise-ANDed against a given IP address, or I<txt>
+meaning that TXT records should be looked up and returned (rather than
+A records)a.  If omitted, type defaults to I<normal>
 
 =item data
 
@@ -152,7 +154,7 @@ It is simply returned back unchanged in the list of hits.
 
 =back
 
-$options, if supplied, is a hash of options.  Currently, two options
+$options, if supplied, is a hash of options.  Currently, three options
 are defined:
 
 =over 4
@@ -178,6 +180,11 @@ the key in the domain, you can separate it out with the lookup_keys hash,
 making the returned results more readable.
 
 =back
+
+=item query_domain ( $domain, $dnsbls [, $options])
+
+Similar to query_ip, but considers $domain to be a domain name rather
+than an IP address, and does not reverse the domain.
 
 =item get_answers ( )
 
@@ -216,8 +223,8 @@ The userdata as supplied in the I<query_ip()> call
 
 =item actual_hits
 
-Reference to array containing actual A records returned by the lookup that
-caused a hit.
+Reference to array containing actual A or TXT records returned by the
+lookup that caused a hit.
 
 =item replycode
 
@@ -268,10 +275,23 @@ sub query_is_in_flight
 sub query_ip
 {
 	my ($self, $ipaddr, $dnsbls, $options) = @_;
+	croak('Cannot issue new query while one is in flight') if $self->{in_flight};
+	croak('First argument (ip address) is required')       unless $ipaddr;
+	croak('Second argument (dnsbl list) is required')      unless $dnsbls;
+
+	# Reverse the IP address in preparation for lookups
+	my $revip = $self->_reverse_address($ipaddr);
+
+	return $self->query_domain($revip, $dnsbls, $options);
+}
+
+sub query_domain
+{
+	my ($self, $ip_or_domain, $dnsbls, $options) = @_;
 
 	croak('Cannot issue new query while one is in flight') if $self->{in_flight};
-	croak('First argument (ip address) is required')     unless $ipaddr;
-	croak('Second argument (dnsbl list) is required')    unless $dnsbls;
+	croak('First argument (domain) is required')           unless $ip_or_domain;
+	croak('Second argument (dnsbl list) is required')      unless $dnsbls;
 
 	foreach my $opt qw(early_exit return_all) {
 		if ($options && exists($options->{$opt})) {
@@ -280,8 +300,6 @@ sub query_ip
 			$self->{$opt} = 0;
 		}
 	}
-	# Reverse the IP address in preparation for lookups
-	my $revip = $self->_reverse_address($ipaddr);
 
 	# Build a hash of domains to query.  The key is the domain;
 	# value is an arrayref of type/data pairs
@@ -291,7 +309,7 @@ sub query_ip
 		$lookup_keys = $options->{lookup_keys};
 	}
 
-	$self->_send_queries($revip, $lookup_keys);
+	$self->_send_queries($ip_or_domain, $lookup_keys);
 }
 
 sub get_answers
@@ -337,7 +355,7 @@ sub _build_domains
 
 sub _send_queries
 {
-	my ($self, $revip, $lookup_keys) = @_;
+	my ($self, $ip_or_domain, $lookup_keys) = @_;
 
 	$self->{in_flight} = 1;
 	$self->{sel} = IO::Select->new();
@@ -350,7 +368,8 @@ sub _send_queries
 		} else {
 			$lookup_key = '';
 		}
-		my $sock = $self->{resolver}->bgsend("$revip$lookup_key.$domain", 'A');
+		my $sock;
+		$sock = $self->{resolver}->bgsend("$ip_or_domain$lookup_key.$domain", 'ANY');
 		unless ($sock) {
 			die $self->{resolver}->errorstring;
 		}
@@ -406,18 +425,20 @@ sub _process_reply
 
 	my $got_a_hit = 0;
 	foreach my $rr ($pack->answer) {
-		next unless $rr->type eq 'A';
+		next unless ($rr->type eq 'A' || uc($rr->type) eq 'TXT');
 		foreach my $dnsbl (@$entry) {
 			my $this_rr_hit = 0;
 			next if $dnsbl->{hit} && ($dnsbl->{type} eq 'match');
 			$dnsbl->{replycode} = $rcode;
 			if ($dnsbl->{type} eq 'normal') {
+				next unless $rr->type eq 'A';
 				$this_rr_hit = 1;
 			} elsif ($dnsbl->{type} eq 'match') {
+				next unless $rr->type eq 'A';
 				next unless $rr->address eq $dnsbl->{data};
 				$this_rr_hit = 1;
 			} elsif ($dnsbl->{type} eq 'mask') {
-
+				next unless $rr->type eq 'A';
 				my @quads;
 				# For mask, we can be given an IP mask like
 				# a.b.c.d, or an integer n.  The latter case
@@ -433,6 +454,9 @@ sub _process_reply
 				next unless ($got & $mask);
 
 				$this_rr_hit = 1;
+			} elsif ($dnsbl->{type} eq 'txt') {
+				next unless uc($rr->type) eq 'TXT';
+				$this_rr_hit = 1;
 			}
 
 			if( $this_rr_hit ) {
@@ -440,7 +464,11 @@ sub _process_reply
 				if( ! $dnsbl->{actual_hits} ) {
 					$dnsbl->{actual_hits} = [];
 				}
-				push @{$dnsbl->{actual_hits}}, $rr->address;
+				if ($rr->type eq 'A') {
+					push @{$dnsbl->{actual_hits}}, $rr->address;
+				} else {
+					push @{$dnsbl->{actual_hits}}, $rr->txtdata;
+				}
 				$got_a_hit = 1;
 			}
 		}
