@@ -7,7 +7,7 @@ use Carp;
 use Net::DNS::Resolver;
 use IO::Select;
 
-our $VERSION = '0.203';
+our $VERSION = '0.204';
 
 =head1 NAME
 
@@ -293,7 +293,7 @@ sub query_domain
 	croak('First argument (domain) is required')           unless $ip_or_domain;
 	croak('Second argument (dnsbl list) is required')      unless $dnsbls;
 
-	foreach my $opt qw(early_exit return_all) {
+	foreach my $opt (qw(early_exit return_all)) {
 		if ($options && exists($options->{$opt})) {
 			$self->{$opt} = $options->{$opt};
 		} else {
