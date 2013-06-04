@@ -5,6 +5,9 @@ use Net::DNSBL::Client;
 plan skip_all => 'DNS unavailable; skipping tests' unless Net::DNS::Resolver->new->query('cpan.org');
 plan tests => 1;
 
+ok(1, 'dwltest.com._vouch.dwl.spamhaus.org returns nothing useful; enable these tests if/when SpamHaus fixes it.');
+exit(0);
+
 my $c = Net::DNSBL::Client->new();
 
 # http://www.spamhauswhitelist.com/en/usage.html
