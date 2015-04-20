@@ -7,7 +7,7 @@ use Carp;
 use Net::DNS::Resolver;
 use IO::Select;
 
-our $VERSION = '0.205';
+our $VERSION = '0.206';
 
 =head1 NAME
 
@@ -547,7 +547,7 @@ L<Net::DNS::Resolver>, L<IO::Select>
 
 =head1 AUTHOR
 
-David Skoll <dfs@roaringpenguin.com>,
+Dianne Skoll <dfs@roaringpenguin.com>,
 Dave O'Neill <dmo@roaringpenguin.com>
 
 =head1 COPYRIGHT AND LICENSE

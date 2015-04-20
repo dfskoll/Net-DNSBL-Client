@@ -88,7 +88,7 @@ The program's exit value is the number of DNSBLs that were hit.
 
 =head1 AUTHOR
 
-David F. Skoll <dfs@roaringpenguin.com>
+Dianne Skoll <dfs@roaringpenguin.com>
 
 =head1 COPYRIGHT AND LICENSE
 
