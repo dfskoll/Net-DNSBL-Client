@@ -566,12 +566,13 @@ L<Net::DNS::Resolver>, L<IO::Select>
 
 =head1 AUTHOR
 
-Dianne Skoll <dfs@roaringpenguin.com>,
-Dave O'Neill <dmo@roaringpenguin.com>
+Dianne Skoll <dianne@skoll.ca>
+Dave O'Neill <dmo@dmo.ca>
 
 =head1 COPYRIGHT AND LICENSE
 
 Copyright (c) 2010 Roaring Penguin Software
+Copyright (c) 2022 Dianne Skoll
 
 This program is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
