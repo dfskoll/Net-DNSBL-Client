@@ -23,7 +23,7 @@ my @expected = (
 		userdata => 'Matches any dnswl.org category',
 		hit => 1,
 		data => '0.0.255.255',
-		actual_hits => [ '127.0.10.3' ],
+		actual_hits => [ '127.0.10.0' ],
 		replycode  => 'NOERROR',
 		type => 'mask'
 	},
@@ -45,7 +45,7 @@ $c->query_ip('127.0.0.2', [
 		userdata => 'Matches any dnswl.org category',
 		hit => 1,
 		data => undef,
-		actual_hits => [ 'https://subscription.dnswl.org/' ],
+		actual_hits => [ 'dnswl.test https://dnswl.org/s/?s=127' ],
 		replycode  => 'NOERROR',
 		type => 'txt'
 	},
